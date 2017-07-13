@@ -62,17 +62,23 @@ class AccountInvoice(models.Model):
             line.agents = None
         return res
 
+    @api.model
+    def _prepare_line_agents_data(self, line):
+        rec = []
+        for agent in self.partner_id.agents:
+            rec.append({
+                'agent': agent.id,
+                'commission': agent.commission.id,
+            })
+        return rec
+
     @api.multi
     def recompute_lines_agents(self):
         for invoice in self:
             for line in invoice.invoice_line_ids:
                 line.agents.unlink()
-                for agent in self.partner_id.agents:
-                    line.agents.create({
-                        'sale_line': line.id,
-                        'agent': agent.id,
-                        'commission': agent.commission.id,
-                    })
+                line_agents_data = invoice._prepare_line_agents_data(line)
+                line.agents = [(0, 0, line_agent_data) for line_agent_data in line_agents_data]
 
 
 class AccountInvoiceLine(models.Model):
